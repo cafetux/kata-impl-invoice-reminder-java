@@ -22,6 +22,14 @@ public class Invoice {
         this.dueDate = dueDate;
     }
 
+    public Invoice(String id, double price, Person contact, LocalDate dueDate, LocalDate paymentDate) {
+        this.id = id;
+        this.price = price;
+        this.contact = contact;
+        this.dueDate = dueDate;
+        this.paymentDate = paymentDate;
+    }
+
     public String getId() {
         return id;
     }
@@ -40,5 +48,9 @@ public class Invoice {
 
     public boolean isNotPayed() {
         return paymentDate==null;
+    }
+
+    public Person getContact() {
+        return contact;
     }
 }

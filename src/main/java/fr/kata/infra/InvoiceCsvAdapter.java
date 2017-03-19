@@ -1,13 +1,14 @@
 package fr.kata.infra;
 
+import fr.kata.customer.Person;
+import fr.kata.infra.converter.DateConverter;
 import fr.kata.invoice.Invoice;
 import fr.kata.invoice.Invoices;
 
-import java.io.FileNotFoundException;
+import java.io.*;
 import java.util.List;
-import java.util.stream.Stream;
-
-import static java.util.stream.Collectors.toList;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Created by fmaury on 16/03/17.
@@ -15,6 +16,7 @@ import static java.util.stream.Collectors.toList;
 public class InvoiceCsvAdapter implements Invoices {
 
     private String filepath;
+    private DateConverter dateConverter = new DateConverter();
 
     public InvoiceCsvAdapter(String filepath) {
         this.filepath = filepath;
@@ -22,21 +24,62 @@ public class InvoiceCsvAdapter implements Invoices {
 
     @Override
     public List<Invoice> all() {
-        try {
-            return read().map(this::toInvoice).collect(toList());
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
+        return read();
+    }
+
+    private Invoice toInvoice(String[] line) {
+        try{
+            if(line[3]!=null && !Objects.equals(line[3], "")) {
+                return new Invoice(trim(line[0]), Double.valueOf(line[1]) / 100, new Person(trim(line[4]), trim(line[5]), trim(line[6])), dateConverter.parse(line[2]), dateConverter.parse(line[3]));
+            }else{
+                return new Invoice(trim(line[0]), Double.valueOf(line[1]) / 100, new Person(trim(line[4]), trim(line[5]), trim(line[6])), dateConverter.parse(line[2]));
+            }
+        } catch(Exception e){
+            return null;
         }
     }
 
-    private Invoice toInvoice(List<String> line) {
-        return new Invoice(line.get(0),0.0,null,null);
+    private String trim(String s) {
+        return s!=null?s.trim():null;
     }
 
 
-    private Stream<List<String>> read() throws FileNotFoundException {
-        return Stream.generate(new CsvLineSupplier(filepath));
+    public List<Invoice> read() {
+        List<Invoice> inputList;
+
+        BufferedReader br = null;
+        try {
+            File inputF = new File(filepath);
+
+            InputStream inputFS = new FileInputStream(inputF);
+
+            br = new BufferedReader(new InputStreamReader(inputFS));
+
+            inputList = br.lines()
+                    // skip the header of the csv
+                    .skip(1)
+                    .map(x -> x.split(","))
+                    .map(this::toInvoice)
+                    .filter(x -> x != null)
+                    .collect(Collectors.toList());
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            closeQuietly(br);
+        }
+
+        return inputList;
     }
 
+    private void closeQuietly(BufferedReader br) {
+        if (br != null) {
+            try {
+                br.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
 }
